@@ -1,0 +1,9 @@
+{
+  "tenant_id": "tenant-8f92a1b0-4c31-11ee-be56-0242ac120002",
+  "device_uuid": "device-3c90a1b0-4c31-11ee-be56-0242ac120002",
+  "cert_path": "cert.pem",
+  "key_path": "key.pem",
+  "scan_interval": "4h",
+  "max_jitter": "30m",
+  "software_scan_paths": []
+}

@@ -1,0 +1,9 @@
+{
+  "tenant_id": "tenant-live-test",
+  "device_uuid": "device-live-test",
+  "cert_path": "cert.pem",
+  "key_path": "key.pem",
+  "scan_interval": "4h",
+  "max_jitter": "30m",
+  "software_scan_paths": ["/tmp"]
+}
