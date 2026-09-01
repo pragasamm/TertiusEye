@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"time"
@@ -9,6 +10,8 @@ import (
 	"tertiuseye/agent/pkg/collector"
 	"tertiuseye/agent/pkg/config"
 	"tertiuseye/agent/pkg/model"
+	"tertiuseye/agent/pkg/network"
+	"tertiuseye/agent/pkg/storage"
 )
 
 // PayloadHandler is a callback invoked whenever a discovery payload is produced.
@@ -16,10 +19,12 @@ type PayloadHandler func(ctx context.Context, payload *model.DiscoveryPayload) e
 
 // Agent orchestrates startup initialization, ticker loop with randomized jitter, and discovery runs.
 type Agent struct {
-	cfg     *config.Config
-	engine  *collector.Engine
-	handler PayloadHandler
-	rand    *rand.Rand
+	cfg        *config.Config
+	engine     *collector.Engine
+	handler    PayloadHandler
+	mtlsClient *network.Client
+	queue      *storage.SQLiteQueue
+	rand       *rand.Rand
 }
 
 // NewAgent constructs a new Agent instance.
@@ -31,6 +36,12 @@ func NewAgent(cfg *config.Config, handler PayloadHandler) *Agent {
 		handler: handler,
 		rand:    r,
 	}
+}
+
+// SetNetworkClient configures the mTLS HTTP network client and offline SQLite storage queue.
+func (a *Agent) SetNetworkClient(client *network.Client, queue *storage.SQLiteQueue) {
+	a.mtlsClient = client
+	a.queue = queue
 }
 
 // CalculateJitter returns a random duration between 0 and maxJitter.
@@ -54,6 +65,17 @@ func (a *Agent) RunOneShot(ctx context.Context) (*model.DiscoveryPayload, error)
 		}
 	}
 
+	if a.mtlsClient != nil {
+		payloadBytes, err := json.Marshal(payload)
+		if err == nil {
+			if err := a.mtlsClient.Transmit(ctx, string(payloadBytes)); err != nil {
+				fmt.Printf("[Agent] Telemetry transmission status: %v\n", err)
+			} else {
+				fmt.Println("[Agent] Telemetry payload transmitted successfully over mTLS!")
+			}
+		}
+	}
+
 	return payload, nil
 }
 
@@ -61,6 +83,11 @@ func (a *Agent) RunOneShot(ctx context.Context) (*model.DiscoveryPayload, error)
 func (a *Agent) Start(ctx context.Context) error {
 	fmt.Printf("[Agent] Starting Discovery Agent loop. TenantID: %s, DeviceUUID: %s\n", a.cfg.TenantID, a.cfg.DeviceUUID)
 	fmt.Printf("[Agent] Ticker Base Interval: %s, Max Jitter: %s\n", a.cfg.ScanInterval, a.cfg.MaxJitter)
+
+	if a.mtlsClient != nil && a.queue != nil {
+		// Launch background goroutine polling for reconnection to flush offline SQLite payloads (LLD 2.2)
+		a.mtlsClient.StartBackgroundFlusher(ctx, 1*time.Minute)
+	}
 
 	// Execute initial discovery run immediately upon startup
 	fmt.Println("[Agent] Performing initial startup discovery run...")
