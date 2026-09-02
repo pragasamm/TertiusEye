@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -67,12 +68,35 @@ func (p *ProcessCollector) Collect(ctx context.Context) ([]model.ProcessInfo, er
 					PID: proc.Pid,
 				}
 
-				if name, err := proc.NameWithContext(ctx); err == nil {
+				if name, err := proc.NameWithContext(ctx); err == nil && name != "" {
 					info.Name = name
 				}
 
-				if exe, err := proc.ExeWithContext(ctx); err == nil {
+				if exe, err := proc.ExeWithContext(ctx); err == nil && exe != "" {
 					info.ExecutablePath = exe
+					if info.Name == "" {
+						info.Name = filepath.Base(exe)
+					}
+				}
+
+				if cmdline, err := proc.CmdlineWithContext(ctx); err == nil && cmdline != "" {
+					args := strings.Fields(cmdline)
+					if len(args) > 0 {
+						if info.ExecutablePath == "" {
+							info.ExecutablePath = args[0]
+						}
+						if info.Name == "" {
+							info.Name = filepath.Base(args[0])
+						}
+					}
+				}
+
+				if info.Name == "" {
+					if info.ExecutablePath != "" {
+						info.Name = filepath.Base(info.ExecutablePath)
+					} else {
+						info.Name = fmt.Sprintf("Process [%d]", proc.Pid)
+					}
 				}
 
 				if cpuPercent, err := proc.CPUPercentWithContext(ctx); err == nil {

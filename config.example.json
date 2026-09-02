@@ -5,5 +5,8 @@
   "key_path": "key.pem",
   "scan_interval": "4h",
   "max_jitter": "30m",
-  "software_scan_paths": []
+  "software_scan_paths": [
+    "./swidtags",
+    "./"
+  ]
 }

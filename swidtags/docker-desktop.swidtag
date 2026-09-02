@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SoftwareIdentity
+    xmlns="http://standards.iso.org/iso/19770/-2/2015/schema.xsd"
+    name="Docker Desktop Enterprise"
+    version="4.31.0"
+    tagId="com.docker.desktop-4.31.0"
+    patch="false"
+    supplemental="false">
+    <Entity name="Docker Inc" regid="docker.com" role="softwareCreator licensor tagCreator"/>
+    <Link rel="installation" href="https://www.docker.com/products/docker-desktop"/>
+</SoftwareIdentity>

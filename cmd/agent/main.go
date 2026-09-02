@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"tertiuseye/agent/pkg/agent"
@@ -16,12 +20,17 @@ import (
 	"tertiuseye/agent/pkg/storage"
 )
 
+//go:embed web/index.html
+var uiHTML []byte
+
 func main() {
 	configPath := flag.String("config", "config.json", "Path to provisioned agent configuration file")
 	oneShot := flag.Bool("one-shot", false, "Execute a single discovery run and print output to stdout, then exit")
 	verifyCert := flag.Bool("verify-cert", false, "Verify X.509 client certificate loading and exit")
 	endpointURL := flag.String("endpoint", "", "Ingestion API endpoint URL (overrides default or mTLS endpoint)")
 	dbPath := flag.String("sqlite-db", "offline_cache.db", "Path to local embedded SQLite offline queue database")
+	showUI := flag.Bool("ui", false, "Launch interactive Web UI dashboard for one-shot telemetry demonstration")
+	uiPort := flag.Int("port", 8090, "Port for the interactive Demo Web UI dashboard")
 	flag.Parse()
 
 	if *configPath == "" {
@@ -59,7 +68,7 @@ func main() {
 		if err != nil {
 			return fmt.Errorf("failed to format payload JSON: %w", err)
 		}
-		if *oneShot && *endpointURL == "" {
+		if *oneShot && !*showUI && *endpointURL == "" {
 			fmt.Println(string(output))
 		} else {
 			fmt.Printf("[Agent] Collected telemetry payload: CPU model='%s', RAM total=%d, Processes=%d, SWID tags=%d\n",
@@ -86,6 +95,54 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
+	// Web UI Demo Mode
+	if *showUI {
+		uiURL := fmt.Sprintf("http://localhost:%d", *uiPort)
+		mux := http.NewServeMux()
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write(uiHTML)
+		})
+
+		mux.HandleFunc("/api/scan", func(w http.ResponseWriter, r *http.Request) {
+			payload, err := ag.RunOneShot(r.Context())
+			if err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%v"}`, err), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(payload)
+		})
+
+		server := &http.Server{Addr: fmt.Sprintf(":%d", *uiPort), Handler: mux}
+
+		go func() {
+			fmt.Printf("\n===========================================================\n")
+			fmt.Printf(" 🚀 TertiusEye Endpoint Agent Demo Dashboard Running!\n")
+			fmt.Printf(" 🌐 Open in Browser: %s\n", uiURL)
+			fmt.Printf("===========================================================\n\n")
+
+			// Auto open browser on macOS/Linux/Windows
+			switch runtime.GOOS {
+			case "darwin":
+				_ = exec.Command("open", uiURL).Start()
+			case "windows":
+				_ = exec.Command("cmd", "/c", "start", uiURL).Start()
+			case "linux":
+				_ = exec.Command("xdg-open", uiURL).Start()
+			}
+
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				fmt.Printf("[Demo UI] Server error: %v\n", err)
+			}
+		}()
+
+		<-ctx.Done()
+		fmt.Println("\n[Demo UI] Shutting down web server...")
+		_ = server.Shutdown(context.Background())
+		return
+	}
 
 	if *oneShot {
 		fmt.Println("[Agent] Running in one-shot discovery mode...")

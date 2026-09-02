@@ -128,7 +128,56 @@ Binaries will be output to `bin/`:
 - `bin/tertiuseye-agent-windows-amd64.exe`
 - `bin/tertiuseye-agent-windows-arm64.exe`
 
-### 3. Local PostgreSQL Environment (Docker)
+### 3. Running the Binaries
+
+#### A. Endpoint Discovery Agent (`tertiuseye-agent-*`)
+Run the binary matching your platform (e.g. `tertiuseye-agent-darwin-arm64` on Apple Silicon macOS):
+
+- **Interactive Demo Web UI Mode** (Zero DB/AWS dependency - opens live dashboard in browser at `http://localhost:8090`):
+  ```bash
+  make demo
+  # OR
+  ./bin/tertiuseye-agent-darwin-arm64 -config config.example.json -ui -port 8090
+  ```
+
+- **One-Shot Discovery Mode** (Executes a single discovery run and outputs JSON telemetry to stdout):
+  ```bash
+  ./bin/tertiuseye-agent-darwin-arm64 -config config.example.json -one-shot
+  ```
+
+- **Continuous Daemon Mode** (Runs in background using ticker with randomized jitter):
+  ```bash
+  ./bin/tertiuseye-agent-darwin-arm64 -config config.example.json
+  ```
+
+- **Agent Command-Line Flags**:
+  - `-ui`: Launch interactive embedded Web UI dashboard (opens `http://localhost:8090`).
+  - `-port <number>`: Port for the Demo Web UI server (default `8090`).
+  - `-config <path>`: Path to agent configuration file (default `config.json`).
+  - `-one-shot`: Run a single telemetry collection cycle and output JSON to stdout.
+  - `-endpoint <url>`: Override default ingestion service URL endpoint.
+  - `-verify-cert`: Verify X.509 client certificate loading and exit.
+  - `-sqlite-db <path>`: Path to offline queue SQLite database (default `offline_cache.db`).
+
+#### B. Telemetry Ingestion Microservice (`ingestion-service`)
+Starts the high-concurrency `go-chi` HTTP ingestion server:
+```bash
+./bin/ingestion-service -port 8080 -db "postgres://postgres:postgres@localhost:5432/tertiuseye?sslmode=disable" -workers 50
+```
+
+#### C. SaaS Discovery Microservice (`saas-discovery-service`)
+Runs Microsoft Entra ID / Graph API discovery:
+```bash
+./bin/saas-discovery-service -tenant "your-tenant-id" -client-id "your-client-id" -client-secret "your-secret"
+```
+
+#### D. Cloud Discovery Microservice (`cloud-discovery-service`)
+Runs AWS STS `AssumeRole` cross-account EC2 and S3 discovery:
+```bash
+./bin/cloud-discovery-service -role-arn "arn:aws:iam::123456789012:role/TertiusEyeRole"
+```
+
+### 4. Local PostgreSQL Environment (Docker)
 ```bash
 docker-compose up -d
 ```

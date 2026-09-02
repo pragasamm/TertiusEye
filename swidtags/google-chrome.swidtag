@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SoftwareIdentity
+    xmlns="http://standards.iso.org/iso/19770/-2/2015/schema.xsd"
+    name="Google Chrome Enterprise"
+    version="126.0.6478.127"
+    tagId="com.google.chrome-126.0"
+    patch="false"
+    supplemental="false">
+    <Entity name="Google LLC" regid="google.com" role="softwareCreator licensor tagCreator"/>
+    <Link rel="installation" href="https://www.google.com/chrome"/>
+</SoftwareIdentity>

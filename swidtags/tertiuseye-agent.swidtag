@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SoftwareIdentity
+    xmlns="http://standards.iso.org/iso/19770/-2/2015/schema.xsd"
+    name="TertiusEye Endpoint Agent"
+    version="2.1.0"
+    tagId="com.tertiuseye.agent-2.1.0"
+    patch="false"
+    supplemental="false">
+    <Entity name="TertiusEye Security Inc" regid="tertiuseye.com" role="softwareCreator licensor tagCreator"/>
+    <Link rel="installation" href="https://tertiuseye.com/agent/2.1.0"/>
+</SoftwareIdentity>

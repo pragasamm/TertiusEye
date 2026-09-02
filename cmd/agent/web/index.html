@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TertiusEye | Endpoint Agent Discovery Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
+      --surface-bg: rgba(15, 23, 42, 0.75);
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --surface-hover: rgba(30, 41, 59, 0.8);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent-cyan: #38bdf8;
+      --accent-emerald: #34d399;
+      --accent-indigo: #818cf8;
+      --accent-purple: #c084fc;
+      --accent-rose: #fb7185;
+      --status-active: #10b981;
+      --card-radius: 16px;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow-x: hidden;
+    }
+
+    /* Glassmorphism utility */
+    .glass-panel {
+      background: var(--surface-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--card-radius);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 28px;
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    }
+
+    .brand-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: #ffffff;
+      stroke-width: 2.2;
+    }
+
+    .brand-title h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title p {
+      font-size: 12px;
+      color: var(--accent-cyan);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent-emerald);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--status-active);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--status-active);
+      animation: pulse 2s infinite;
+    }
+
+    .auto-refresh-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--surface-border);
+      padding: 6px 14px;
+      border-radius: 20px;
+      user-select: none;
+      transition: var(--transition-fast);
+    }
+
+    .auto-refresh-toggle:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .auto-refresh-toggle input {
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.1); }
+      100% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    .btn-scan {
+      background: linear-gradient(135deg, var(--accent-cyan), #0284c7);
+      color: #ffffff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition-fast);
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+    }
+
+    .btn-scan:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5);
+    }
+
+    .btn-scan:active {
+      transform: translateY(0);
+    }
+
+    .btn-scan.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Main Container */
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Top Grid / Metrics Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .metric-card {
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent-color, var(--accent-cyan)), transparent);
+    }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .metric-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .metric-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-color, var(--accent-cyan));
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .progress-bar-container {
+      margin-top: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent-color, var(--accent-cyan));
+      width: 0%;
+      transition: width 0.8s ease-out;
+      border-radius: 3px;
+    }
+
+    /* Tabs Navigation */
+    .tabs-nav {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--surface-border);
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    /* Tab Content Areas */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Table Component */
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--card-radius);
+      max-height: 650px;
+    }
+
+    .table-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--surface-border);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .table-controls-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .search-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      width: 300px;
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+    }
+
+    .select-input {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .select-input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--surface-border);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      z-index: 5;
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+    }
+
+    tr:hover td {
+      background: var(--surface-hover);
+    }
+
+    .code-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-cyan);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-blue { background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); }
+    .badge-purple { background: rgba(192, 132, 252, 0.15); color: var(--accent-purple); }
+    .badge-green { background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald); }
+
+    /* JSON Viewer */
+    .json-container {
+      position: relative;
+    }
+
+    .btn-copy {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .btn-copy:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    pre {
+      background: rgba(9, 13, 22, 0.85);
+      padding: 20px;
+      border-radius: var(--card-radius);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #e2e8f0;
+      overflow-x: auto;
+      max-height: 600px;
+      line-height: 1.5;
+    }
+
+    /* Details Grid */
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .detail-item span:first-child {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .detail-item span:last-child {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="glass-panel">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <h1>TertiusEye Agent</h1>
+        <p>Endpoint Telemetry Dashboard</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <label class="auto-refresh-toggle">
+        <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh(this)">
+        <span>Auto-Refresh (3s)</span>
+      </label>
+
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>One-Shot Demo Mode</span>
+      </div>
+
+      <button id="scanBtn" class="btn-scan" onclick="triggerScan()">
+        <svg id="scanIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+        <span>Run One-Shot Scan</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Metrics Summary Grid -->
+    <div class="metrics-grid">
+      <div class="metric-card glass-panel" style="--accent-color: var(--accent-cyan)">
+        <div class="metric-header">
+          <span class="metric-label">CPU Hardware</span>
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <rect x="9" y="9" width="6" height="6" />
+              <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3" />
+            </svg>
+          </div>
+        </div>
+        <div id="cpuModel" class="metric-value">Loading...</div>
+        <div id="cpuSub" class="metric-sub">Architecture & Cores</div>
+      </div>
+
+      <div class="metric-card glass-panel" style="--accent-color: var(--accent-emerald)">
+        <div class="metric-header">
+          <span class="metric-label">RAM Usage</span>
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 5v3M10 5v3M14 5v3M18 5v3M2 8h20v8H2z" />
+            </svg>
+          </div>
+        </div>
+        <div id="ramValue" class="metric-value">0 GB / 0 GB</div>
+        <div id="ramSub" class="metric-sub">0% Used</div>
+        <div class="progress-bar-container">
+          <div id="ramProgress" class="progress-bar-fill" style="--accent-color: var(--accent-emerald)"></div>
+        </div>
+      </div>
+
+      <div class="metric-card glass-panel" style="--accent-color: var(--accent-indigo)">
+        <div class="metric-header">
+          <span class="metric-label">Host Processes</span>
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </div>
+        </div>
+        <div id="procCount" class="metric-value">0</div>
+        <div class="metric-sub">Active Running Processes</div>
+      </div>
+
+      <div class="metric-card glass-panel" style="--accent-color: var(--accent-purple)">
+        <div class="metric-header">
+          <span class="metric-label">Software Inventory</span>
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            </svg>
+          </div>
+        </div>
+        <div id="swCount" class="metric-value">0</div>
+        <div class="metric-sub">Discovered SWID Tags</div>
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('processes', this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Process Explorer
+      </button>
+      <button class="tab-btn" onclick="switchTab('hardware', this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+        System Specs
+      </button>
+      <button class="tab-btn" onclick="switchTab('software', this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Software Inventory
+      </button>
+      <button class="tab-btn" onclick="switchTab('json', this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Raw Telemetry JSON
+      </button>
+    </div>
+
+    <!-- Tab 1: Process Explorer -->
+    <div id="tab-processes" class="tab-content active glass-panel">
+      <div class="table-controls">
+        <div class="table-controls-left">
+          <input type="text" id="procSearch" class="search-input" placeholder="🔍 Search by name, PID, user, path..." oninput="filterProcesses()">
+          <select id="procSort" class="select-input" onchange="filterProcesses()">
+            <option value="newest" selected>⚡ Newest First (High PID / Launch)</option>
+            <option value="cpu">🔥 Highest CPU %</option>
+            <option value="ram">💾 Highest Memory (RAM)</option>
+            <option value="name">🔤 Process Name (A-Z)</option>
+            <option value="pid_asc">🔢 PID (Ascending)</option>
+          </select>
+        </div>
+        <span id="filterStats" style="font-size: 12px; color: var(--text-muted)">Showing 0 processes</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>PID</th>
+              <th>Process Name</th>
+              <th>Executable Path</th>
+              <th>CPU %</th>
+              <th>RAM</th>
+              <th>Username</th>
+            </tr>
+          </thead>
+          <tbody id="procTableBody">
+            <tr><td colspan="6" style="text-align:center; padding: 30px; color: var(--text-dim)">Click "Run One-Shot Scan" to collect host telemetry</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: System Specs -->
+    <div id="tab-hardware" class="tab-content glass-panel">
+      <div class="details-grid" id="systemSpecsGrid">
+        <div class="detail-item"><span>Hostname</span><span id="specHostname">-</span></div>
+        <div class="detail-item"><span>Operating System</span><span id="specOS">-</span></div>
+        <div class="detail-item"><span>Architecture</span><span id="specArch">-</span></div>
+        <div class="detail-item"><span>Tenant ID</span><span id="specTenant">-</span></div>
+        <div class="detail-item"><span>Device UUID</span><span id="specDeviceUUID">-</span></div>
+        <div class="detail-item"><span>Scan Timestamp</span><span id="specTime">-</span></div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Software Inventory -->
+    <div id="tab-software" class="tab-content glass-panel">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Software Name</th>
+              <th>Version</th>
+              <th>Publisher</th>
+              <th>SWID Tag Path</th>
+            </tr>
+          </thead>
+          <tbody id="swTableBody">
+            <tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-dim)">No ISO/IEC 19770-2 .swidtag software tags found</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Raw Telemetry JSON -->
+    <div id="tab-json" class="tab-content json-container">
+      <button class="btn-copy" onclick="copyJSON()">📋 Copy JSON</button>
+      <pre id="jsonOutput">// Discovery payload JSON will be loaded here...</pre>
+    </div>
+
+  </main>
+
+  <footer>
+    TertiusEye Enterprise ITAM Platform &bull; Endpoint Discovery Agent (One-Shot Demo Mode)
+  </footer>
+
+  <script>
+    let currentPayload = null;
+    let autoRefreshTimer = null;
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function toggleAutoRefresh(cb) {
+      if (cb.checked) {
+        triggerScan();
+        autoRefreshTimer = setInterval(triggerScan, 3000);
+      } else {
+        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      }
+    }
+
+    async function triggerScan() {
+      const btn = document.getElementById('scanBtn');
+      btn.classList.add('loading');
+
+      try {
+        const response = await fetch('/api/scan');
+        if (!response.ok) throw new Error('Scan HTTP error: ' + response.statusText);
+        currentPayload = await response.json();
+        renderDashboard(currentPayload);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        btn.classList.remove('loading');
+      }
+    }
+
+    function renderDashboard(data) {
+      if (!data) return;
+
+      // Render Hardware / Specs
+      const hw = data.hardware || {};
+      const cpu = hw.cpu || {};
+      const ram = hw.ram || {};
+      const meta = data.metadata || {};
+
+      document.getElementById('cpuModel').textContent = cpu.model_name || 'Generic CPU';
+      document.getElementById('cpuSub').textContent = `${meta.arch || ''} - ${cpu.cores || 0} Cores / ${cpu.threads || 0} Threads`;
+
+      const totalRAM = ram.total_bytes || 0;
+      const usedRAM = ram.used_bytes || (totalRAM - (ram.available_bytes || 0));
+      const ramPct = totalRAM > 0 ? ((usedRAM / totalRAM) * 100).toFixed(1) : 0;
+
+      document.getElementById('ramValue').textContent = `${formatBytes(usedRAM)} / ${formatBytes(totalRAM)}`;
+      document.getElementById('ramSub').textContent = `${ramPct}% Used`;
+      document.getElementById('ramProgress').style.width = `${ramPct}%`;
+
+      // Stats
+      const processes = data.processes || [];
+      document.getElementById('procCount').textContent = processes.length;
+
+      const sw = (data.software && data.software.swid_tags) || [];
+      document.getElementById('swCount').textContent = sw.length;
+
+      // Specs Tab
+      document.getElementById('specHostname').textContent = meta.hostname || '-';
+      document.getElementById('specOS').textContent = meta.os || '-';
+      document.getElementById('specArch').textContent = meta.arch || '-';
+      document.getElementById('specTenant').textContent = meta.tenant_id || '-';
+      document.getElementById('specDeviceUUID').textContent = meta.device_uuid || '-';
+      document.getElementById('specTime').textContent = meta.timestamp || new Date().toISOString();
+
+      // Process Table
+      renderProcesses(processes);
+
+      // Software Table
+      const swTbody = document.getElementById('swTableBody');
+      if (sw.length === 0) {
+        swTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-dim)">No ISO/IEC 19770-2 .swidtag tags discovered on this host.</td></tr>`;
+      } else {
+        swTbody.innerHTML = sw.map(s => {
+          const publisher = (s.entities && s.entities.length > 0) ? s.entities[0].name : 'Unknown';
+          const tagPath = s.source_file_path || s.path || '-';
+          return `
+            <tr>
+              <td class="code-text" style="font-weight: 600">${s.name}</td>
+              <td><span class="badge badge-purple">${s.version || '1.0.0'}</span></td>
+              <td>${publisher}</td>
+              <td style="font-size: 11px; color: var(--text-muted)">${tagPath}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // JSON Viewer
+      document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
+    }
+
+    function renderProcesses(processes) {
+      const tbody = document.getElementById('procTableBody');
+      const search = document.getElementById('procSearch').value.toLowerCase().trim();
+      const sortMode = document.getElementById('procSort').value;
+
+      let filtered = processes.filter(p => 
+        (p.name && p.name.toLowerCase().includes(search)) ||
+        (p.pid && p.pid.toString().includes(search)) ||
+        (p.username && p.username.toLowerCase().includes(search)) ||
+        (p.executable_path && p.executable_path.toLowerCase().includes(search))
+      );
+
+      // Sort processes dynamically
+      filtered.sort((a, b) => {
+        if (sortMode === 'newest') {
+          const timeA = a.create_time_ms || a.pid;
+          const timeB = b.create_time_ms || b.pid;
+          return timeB - timeA;
+        } else if (sortMode === 'cpu') {
+          return (b.cpu_percent || 0) - (a.cpu_percent || 0);
+        } else if (sortMode === 'ram') {
+          return (b.memory_bytes || 0) - (a.memory_bytes || 0);
+        } else if (sortMode === 'name') {
+          return (a.name || '').localeCompare(b.name || '');
+        } else if (sortMode === 'pid_asc') {
+          return a.pid - b.pid;
+        }
+        return b.pid - a.pid;
+      });
+
+      document.getElementById('filterStats').textContent = `Showing ${filtered.length} of ${processes.length} active processes`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 30px; color: var(--text-dim)">No processes found matching "${search}"</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.slice(0, 300).map(p => `
+        <tr>
+          <td class="code-text">${p.pid}</td>
+          <td style="font-weight: 600; color: #ffffff">${p.name || '<em>unnamed</em>'}</td>
+          <td style="font-size: 11px; color: var(--text-muted); max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${p.executable_path || ''}">
+            ${p.executable_path || '-'}
+          </td>
+          <td><span class="badge badge-blue">${(p.cpu_percent || 0).toFixed(2)}%</span></td>
+          <td>${formatBytes(p.memory_bytes)}</td>
+          <td><span class="badge badge-green">${p.username || 'system'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function filterProcesses() {
+      if (currentPayload && currentPayload.processes) {
+        renderProcesses(currentPayload.processes);
+      }
+    }
+
+    function copyJSON() {
+      const jsonText = document.getElementById('jsonOutput').textContent;
+      navigator.clipboard.writeText(jsonText).then(() => {
+        alert('JSON telemetry copied to clipboard!');
+      });
+    }
+
+    // Auto-trigger scan on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      triggerScan();
+    });
+  </script>
+</body>
+</html>
