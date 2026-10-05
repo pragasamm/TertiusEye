@@ -332,3 +332,8 @@ make build-saasdisc
 ### Verification
 - Confirm Entra ID OAuth2 authentication obtains bearer tokens.
 - Verify license allocation details are written to the database under tenant RLS protection.
+
+### Open questions
+- How to test the phase3 in a customer like env?
+- Need more inputs and way to test phase4 and further. 
+- Testing needs to be rigorous
