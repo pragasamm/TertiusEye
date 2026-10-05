@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TertiusEye | Architecture & Implementation Plan Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --accent: #38bdf8;
+    }
+
+    body {
+      background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 32px;
+      min-height: 100vh;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 32px auto;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(to right, #ffffff, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      font-size: 15px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .diagram-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .diagram-card h2 {
+      font-size: 20px;
+      color: #38bdf8;
+      margin-top: 0;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 12px;
+      padding: 24px;
+      overflow-x: auto;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      margin-bottom: 12px;
+    }
+  </style>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      securityLevel: 'loose',
+      themeVariables: {
+        fontFamily: 'Inter',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#38bdf8',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e1b4b'
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <header>
+    <h1>TertiusEye Architecture & Implementation Plan Visualizer</h1>
+    <p class="subtitle">Interactive high-resolution system diagrams for all 5 progressive implementation phases and system subcomponents.</p>
+  </header>
+
+  <div class="container">
+
+    <!-- Phase 2 -->
+    <div class="diagram-card">
+      <span class="badge">PHASE 2 (LOCAL ENVIRONMENT & PRESENTATION LAYER)</span>
+      <h2>Phase 2: Local Agent, Ingestion & Presentation Web Console</h2>
+      <div class="mermaid">
+flowchart LR
+    subgraph AgentHost["Local Endpoint"]
+        Agent["Local Agent<br/>(cmd/agent)"]
+        SQLite[("Offline SQLite Cache<br/>(offline_cache.db)")]
+        Agent <--> SQLite
+    end
+
+    subgraph LocalServices["Local Development Services"]
+        IngestionSvc["Local Ingestion Service<br/>(cmd/ingestion :8080)<br/>• 50-Worker Goroutine Pool"]
+        WebConsoleSvc["Enterprise Management Console<br/>(cmd/webconsole :8090 & web/)<br/>• Presentation Layer UI"]
+        PostgresDB[("Local PostgreSQL Container<br/>(Docker :5432)<br/>• Row-Level Security (RLS)")]
+
+        IngestionSvc -- "Write Telemetry (RLS Tx)" --> PostgresDB
+        WebConsoleSvc -- "Read Assets & Telemetry (RLS Tx)" --> PostgresDB
+    end
+
+    Agent -- "HTTP POST :8080/api/v1/telemetry<br/>Header: X-Tenant-ID: tenant-123" --> IngestionSvc
+    AdminBrowser["IT Admin Browser"] -- "HTTP GET :8090" --> WebConsoleSvc
+
+    style AgentHost fill:#0f172a,stroke:#6366f1,stroke-width:2px,color:#f8fafc
+    style LocalServices fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#f8fafc
+    style Agent fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style SQLite fill:#7c3aed,stroke:#a78bfa,stroke-width:2px,color:#ffffff
+    style IngestionSvc fill:#059669,stroke:#34d399,stroke-width:2px,color:#ffffff
+    style WebConsoleSvc fill:#6366f1,stroke:#a5b4fc,stroke-width:2px,color:#ffffff
+    style PostgresDB fill:#d97706,stroke:#fbbf24,stroke-width:2px,color:#ffffff
+    style AdminBrowser fill:#e11d48,stroke:#fb7185,stroke-width:2px,color:#ffffff
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="diagram-card">
+      <span class="badge">PHASE 3 (AWS PRODUCTION CLOUD)</span>
+      <h2>Phase 3: AWS Production Ingestion & Presentation Web Console</h2>
+      <div class="mermaid">
+flowchart TB
+    subgraph LocalAgent["Endpoint Infrastructure"]
+        Agent["Endpoint Agent<br/>(cmd/agent)"]
+    end
+
+    subgraph AWSCloud["AWS Production Cloud Infrastructure"]
+        APIGateway["AWS API Gateway (mTLS & OAuth2)<br/>• Verifies mTLS X.509 Certs<br/>• Injects X-Tenant-ID Header"]
+        VPCLink["AWS VPC Link / ALB"]
+        ECSCluster["AWS ECS on Fargate<br/>• Ingestion Service (cmd/ingestion)<br/>• Management Console (cmd/webconsole)"]
+        RDSPostgres[("Amazon RDS PostgreSQL<br/>• Multi-Tenant Row-Level Security")]
+        AWSKMS["AWS KMS<br/>• Envelope Encryption"]
+
+        APIGateway --> VPCLink --> ECSCluster
+        ECSCluster -- "Write Telemetry & Read RLS Tx" --> RDSPostgres
+        RDSPostgres <--> AWSKMS
+    end
+
+    subgraph AdminUser["Presentation UI Users"]
+        AdminBrowser["IT Admin / SOC Browser"]
+    end
+
+    Agent -- "HTTPS mTLS POST" --> APIGateway
+    AdminBrowser -- "HTTPS OIDC Auth" --> APIGateway
+
+    style LocalAgent fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
+    style AWSCloud fill:#0b1329,stroke:#8b5cf6,stroke-width:2px,color:#f8fafc
+    style AdminUser fill:#0f172a,stroke:#e11d48,stroke-width:2px,color:#f8fafc
+    style Agent fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style APIGateway fill:#e11d48,stroke:#fb7185,stroke-width:2px,color:#ffffff
+    style VPCLink fill:#d97706,stroke:#fbbf24,stroke-width:2px,color:#ffffff
+    style ECSCluster fill:#7c3aed,stroke:#a78bfa,stroke-width:2px,color:#ffffff
+    style RDSPostgres fill:#2563eb,stroke:#60a5fa,stroke-width:2px,color:#ffffff
+    style AWSKMS fill:#059669,stroke:#34d399,stroke-width:2px,color:#ffffff
+    style AdminBrowser fill:#e11d48,stroke:#fb7185,stroke-width:2px,color:#ffffff
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

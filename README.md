@@ -19,42 +19,54 @@ TertiusEye is an enterprise IT Asset Management (ITAM) platform built with Golan
 
 ```mermaid
 flowchart TB
-    subgraph Endpoints["Endpoint Infrastructure (Windows / macOS / Linux)"]
-        AgentDaemon["Endpoint Discovery Agent (cmd/agent)\n- Ticker + 30m Jitter Loop\n- Hardware / Process / SWIDtag Collectors"]
-        SQLiteCache[("Offline SQLite Cache\n(offline_cache.db)")]
-        LocalUI["Demo Web UI Dashboard\n(http://localhost:8090)"]
+    %% --- Subgraphs ---
+    subgraph Presentation["1. Presentation & Management UI"]
+        UserBrowser["IT Administrators & SOC Security Teams<br/>(Web Browser / OIDC Auth)"]
+        ManagementConsole["Enterprise Management Console<br/>(cmd/webconsole & web/)<br/>• ITAM Dashboard & Cloud Asset Explorer<br/>• Telemetry & SaaS Usage Analytics"]
 
-        AgentDaemon <--> SQLiteCache
-        AgentDaemon --> LocalUI
+        UserBrowser -- "HTTPS / OIDC JWT Auth" --> ManagementConsole
     end
 
-    subgraph Ingress["AWS Infrastructure & Ingress Layer"]
-        APIGateway["AWS API Gateway (mTLS)\n- Verifies X.509 Client Certs\n- Injects X-Tenant-ID Header"]
+    subgraph Endpoints["2. Endpoint Infrastructure (Win / macOS / Linux)"]
+        AgentDaemon["Endpoint Discovery Agent<br/>(cmd/agent)<br/>• Hardware, Process & SWIDtag Collectors<br/>• Ticker with 30m Execution Jitter"]
+        SQLiteCache[("Offline SQLite Queue<br/>(offline_cache.db)")]
+        
+        AgentDaemon <--> SQLiteCache
+    end
+
+    subgraph Ingress["3. AWS Ingress Layer"]
+        APIGateway["AWS API Gateway<br/>• mTLS Client Cert Verification<br/>• OIDC JWT Tenant Claim Validation<br/>• Injects X-Tenant-ID Header"]
         VPCLink["AWS VPC Link / ALB"]
         
         APIGateway --> VPCLink
     end
 
-    subgraph Microservices["Kubernetes / EKS Microservice Layer"]
-        IngestionSvc["Telemetry Ingestion Service (cmd/ingestion)\n- go-chi/v5 Router\n- 50-Goroutine Worker Pool\n- Backpressure Channel Buffer"]
-        SaaSDiscSvc["SaaS Discovery Service (cmd/saasdisc)\n- MS Entra ID Client Credentials\n- Graph API + HTTP 429 Jitter Backoff"]
-        CloudDiscSvc["Cloud Discovery Service (cmd/clouddisc)\n- AWS STS AssumeRole (ExternalId)\n- EC2 & S3 Resource Scanners"]
+    subgraph Microservices["4. Microservice Engine (ECS / EKS)"]
+        IngestionSvc["Telemetry Ingestion Service<br/>(cmd/ingestion)<br/>• 50-Goroutine Worker Pool"]
+        WebConsoleSvc["Management API Server<br/>(cmd/webconsole)<br/>• RLS Tenant Query Engine"]
+        SaaSDiscSvc["SaaS Discovery Service<br/>(cmd/saasdisc)<br/>• Entra ID / Graph Poller"]
+        CloudDiscSvc["Cloud Discovery Service<br/>(cmd/clouddisc)<br/>• AWS STS AssumeRole Scanner"]
     end
 
-    subgraph ExternalServices["External Cloud Integrations"]
-        MSGraph["Microsoft Graph API / Entra ID"]
-        AWSSTS["AWS Target Accounts (STS / EC2 / S3)"]
-        AWSKMS["AWS KMS (Envelope Encryption)"]
+    subgraph ExternalServices["5. Cloud Provider Integrations"]
+        MSGraph["Microsoft Entra ID & Graph API"]
+        AWSSTS["AWS Target Accounts (EC2 & S3)"]
     end
 
-    subgraph Persistence["Persistence & Security Layer"]
-        PostgreSQL[("PostgreSQL Database (v16)\n- Tenant Row-Level Security (RLS)\n- JSONB GIN Hardware Indexing\n- Devices / SaaS / Cloud Schemas")]
+    subgraph Persistence["6. Persistence & Security Layer"]
+        PostgreSQL[("PostgreSQL 16 Database<br/>• Tenant Row-Level Security (RLS)<br/>• JSONB GIN Hardware Indexing")]
+        AWSKMS["AWS KMS<br/>• AES-256-GCM Envelope Encryption<br/>• RAM DEK Zeroing Safeguard"]
     end
 
-    %% Flow Connections
-    AgentDaemon -- "mTLS POST Payload" --> APIGateway
+    %% --- Flow Connections ---
+    AgentDaemon -- "mTLS HTTPS POST" --> APIGateway
+    ManagementConsole -- "HTTPS API Requests" --> APIGateway
+    
     VPCLink --> IngestionSvc
-    IngestionSvc -- "SET LOCAL app.current_tenant_id\nRLS Transaction" --> PostgreSQL
+    VPCLink --> WebConsoleSvc
+    
+    IngestionSvc -- "Write Telemetry (RLS Tx)" --> PostgreSQL
+    WebConsoleSvc -- "Read Assets & Cloud (RLS Tx)" --> PostgreSQL
     
     SaaSDiscSvc <--> MSGraph
     SaaSDiscSvc -- "Store SaaS Inventory" --> PostgreSQL
@@ -63,6 +75,30 @@ flowchart TB
     CloudDiscSvc -- "Store Cloud Inventory" --> PostgreSQL
 
     PostgreSQL <--> AWSKMS
+    WebConsoleSvc -- "Envelope Decryption Request" --> AWSKMS
+
+    %% --- Modern Color Styling ---
+    style Presentation fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#f8fafc
+    style Endpoints fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
+    style Ingress fill:#0f172a,stroke:#fb7185,stroke-width:2px,color:#f8fafc
+    style Microservices fill:#0f172a,stroke:#a78bfa,stroke-width:2px,color:#f8fafc
+    style ExternalServices fill:#0f172a,stroke:#f59e0b,stroke-width:2px,color:#f8fafc
+    style Persistence fill:#0f172a,stroke:#34d399,stroke-width:2px,color:#f8fafc
+
+    style UserBrowser fill:#4f46e5,stroke:#818cf8,stroke-width:2px,color:#ffffff
+    style ManagementConsole fill:#6366f1,stroke:#a5b4fc,stroke-width:2px,color:#ffffff
+    style AgentDaemon fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style SQLiteCache fill:#7c3aed,stroke:#a78bfa,stroke-width:2px,color:#ffffff
+    style APIGateway fill:#e11d48,stroke:#fb7185,stroke-width:2px,color:#ffffff
+    style VPCLink fill:#d97706,stroke:#fbbf24,stroke-width:2px,color:#ffffff
+    style IngestionSvc fill:#059669,stroke:#34d399,stroke-width:2px,color:#ffffff
+    style SaaSDiscSvc fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style CloudDiscSvc fill:#d97706,stroke:#fbbf24,stroke-width:2px,color:#ffffff
+    style WebConsoleSvc fill:#6366f1,stroke:#a5b4fc,stroke-width:2px,color:#ffffff
+    style MSGraph fill:#4f46e5,stroke:#818cf8,stroke-width:2px,color:#ffffff
+    style AWSSTS fill:#e11d48,stroke:#fb7185,stroke-width:2px,color:#ffffff
+    style AWSKMS fill:#059669,stroke:#34d399,stroke-width:2px,color:#ffffff
+    style PostgreSQL fill:#2563eb,stroke:#60a5fa,stroke-width:2px,color:#ffffff
 ```
 
 ---

@@ -1,4 +1,4 @@
-.PHONY: all build build-all clean test demo
+.PHONY: all build build-all clean test demo view-arch
 
 BINARY_NAME=tertiuseye-agent
 BUILD_DIR=bin
@@ -8,6 +8,9 @@ all: test build-all
 
 demo: build-agent-all
 	./bin/tertiuseye-agent-darwin-arm64 -config config.example.json -ui -port 8090
+
+view-arch:
+	open docs/architecture_viewer.html
 
 test:
 	CGO_ENABLED=1 go test -ldflags="-linkmode=external" -v ./...
