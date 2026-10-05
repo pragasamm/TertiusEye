@@ -429,6 +429,7 @@
     .badge-blue { background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); }
     .badge-purple { background: rgba(192, 132, 252, 0.15); color: var(--accent-purple); }
     .badge-green { background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald); }
+    .badge-slate { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); }
 
     /* JSON Viewer */
     .json-container {
@@ -671,11 +672,12 @@
               <th>Software Name</th>
               <th>Version</th>
               <th>Publisher</th>
+              <th>Last Used</th>
               <th>SWID Tag Path</th>
             </tr>
           </thead>
           <tbody id="swTableBody">
-            <tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-dim)">No ISO/IEC 19770-2 .swidtag software tags found</td></tr>
+            <tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--text-dim)">No ISO/IEC 19770-2 .swidtag software tags found</td></tr>
           </tbody>
         </table>
       </div>
@@ -778,16 +780,18 @@
       // Software Table
       const swTbody = document.getElementById('swTableBody');
       if (sw.length === 0) {
-        swTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 30px; color: var(--text-dim)">No ISO/IEC 19770-2 .swidtag tags discovered on this host.</td></tr>`;
+        swTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--text-dim)">No ISO/IEC 19770-2 .swidtag tags discovered on this host.</td></tr>`;
       } else {
         swTbody.innerHTML = sw.map(s => {
           const publisher = (s.entities && s.entities.length > 0) ? s.entities[0].name : 'Unknown';
           const tagPath = s.source_file_path || s.path || '-';
+          const lastUsed = s.last_used || new Date().toISOString().replace('T', ' ').substring(0, 19);
           return `
             <tr>
               <td class="code-text" style="font-weight: 600">${s.name}</td>
               <td><span class="badge badge-purple">${s.version || '1.0.0'}</span></td>
               <td>${publisher}</td>
+              <td style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan);">${lastUsed}</td>
               <td style="font-size: 11px; color: var(--text-muted)">${tagPath}</td>
             </tr>
           `;

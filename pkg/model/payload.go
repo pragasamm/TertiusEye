@@ -73,6 +73,7 @@ type SWIDTagInfo struct {
 	Entities       []SWIDEntity `json:"entities,omitempty"`
 	Links          []SWIDLink   `json:"links,omitempty"`
 	SourceFilePath string       `json:"source_file_path"`
+	LastUsed       string       `json:"last_used,omitempty"`
 }
 
 // SoftwareInventory contains all discovered software tags.

@@ -21,11 +21,13 @@ type Engine struct {
 
 // NewEngine creates a new Engine initialized with agent configuration.
 func NewEngine(cfg *config.Config) *Engine {
+	swidCollector := NewSWIDCollector(cfg.CleanPaths())
+	swidCollector.IncludeSystemApps = true
 	return &Engine{
 		cfg:  cfg,
 		hw:   NewHardwareCollector(),
 		proc: NewProcessCollector(),
-		swid: NewSWIDCollector(cfg.CleanPaths()),
+		swid: swidCollector,
 	}
 }
 
@@ -60,7 +62,7 @@ func (e *Engine) Collect(ctx context.Context) (*model.DiscoveryPayload, error) {
 	payload.Processes = procData
 
 	// 3. Collect SWID Tag Software Inventory
-	swData, err := e.swid.Collect(ctx)
+	swData, err := e.swid.CollectWithProcesses(ctx, procData)
 	if err != nil {
 		return nil, fmt.Errorf("software inventory collection failed: %w", err)
 	}

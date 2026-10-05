@@ -2,6 +2,15 @@
 
 TertiusEye is an enterprise IT Asset Management (ITAM) platform built with Golang microservices and agent binaries, Amazon EKS container orchestration, and PostgreSQL for multi-tenant persistence.
 
+## Overview & Core Architecture
+
+* **Endpoint Agent (`cmd/agent`)**: Cross-platform (Windows, macOS, Linux) agent collecting hardware metrics, process data, and ISO/IEC 19770-2 `.swidtag` software inventory. Features mutual TLS (mTLS) authentication and offline SQLite payload queuing (`pkg/storage`).
+* **Telemetry Ingestion Service (`cmd/ingestion`)**: High-concurrency `go-chi` microservice with a 50-goroutine worker pool for ingesting telemetry from endpoints.
+* **SaaS Discovery Service (`cmd/saasdisc`)**: Integrates with Microsoft Entra ID / MS Graph API to discover SaaS application usage and licenses.
+* **Cloud Discovery Service (`cmd/clouddisc`)**: Performs cross-account AWS cloud asset discovery (EC2, S3) using AWS STS `AssumeRole`.
+* **Multi-Tenant Persistence (`migrations/001_initial_schema.sql`)**: PostgreSQL database utilizing Row-Level Security (RLS) for multi-tenant data isolation and JSONB GIN indexing.
+* **Envelope Encryption (`pkg/crypto`)**: AWS KMS envelope encryption for sensitive OAuth tokens and credentials using AES-256-GCM with memory-clearing safeguards.
+
 ---
 
 ## System Architecture Overview
