@@ -8,35 +8,52 @@ This document serves as the master technical blueprint for **TertiusEye**, an en
 
 TertiusEye delivers unified IT asset management by combining endpoint agent telemetry, cloud asset discovery, and SaaS application usage polling into a multi-tenant PostgreSQL platform.
 
-```
-                                 ┌─────────────────────────────────┐
-                                 │   Endpoint Discovery Agent      │
-                                 │   (Windows / macOS / Linux)     │
-                                 └────────────────┬────────────────┘
-                                                  │ mTLS (X.509) / Offline SQLite
-                                                  ▼
-                                 ┌─────────────────────────────────┐
-                                 │      AWS API Gateway mTLS       │
-                                 │  (Injects X-Tenant-ID Header)   │
-                                 └────────────────┬────────────────┘
-                                                  │ VPC Link
-                                                  ▼
-                                 ┌─────────────────────────────────┐
-                                 │  Telemetry Ingestion Service    │
-                                 │  (go-chi + 50 Goroutine Pool)   │
-                                 └────────────────┬────────────────┘
-                                                  │ RLS Tx (SET LOCAL app.current_tenant_id)
-                                                  ▼
-┌───────────────────────────┐    ┌─────────────────────────────────┐    ┌───────────────────────────┐
-│   SaaS Discovery Service  │───►│       PostgreSQL Database       │◄───│  Cloud Discovery Service  │
-│(MS Graph / Entra ID + 429)│    │(JSONB GIN Index + RLS Policies) │    │  (AWS STS AssumeRole)     │
-└───────────────────────────┘    ┌─────────────────────────────────┐    └───────────────────────────┘
-                                                  ▲
-                                                  │ AWS KMS DEK Envelope Encryption
-                                 ┌────────────────┴────────────────┐
-                                 │   KMS Envelope Encryption       │
-                                 │   (AES-256-GCM + DEK Zeroing)   │
-                                 └─────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Endpoints["Endpoint Infrastructure (Windows / macOS / Linux)"]
+        AgentDaemon["Endpoint Discovery Agent (cmd/agent)\n- Ticker + 30m Jitter Loop\n- Hardware / Process / SWIDtag Collectors"]
+        SQLiteCache[("Offline SQLite Cache\n(offline_cache.db)")]
+        LocalUI["Demo Web UI Dashboard\n(http://localhost:8090)"]
+
+        AgentDaemon <--> SQLiteCache
+        AgentDaemon --> LocalUI
+    end
+
+    subgraph Ingress["AWS Infrastructure & Ingress Layer"]
+        APIGateway["AWS API Gateway (mTLS)\n- Verifies X.509 Client Certs\n- Injects X-Tenant-ID Header"]
+        VPCLink["AWS VPC Link / ALB"]
+        
+        APIGateway --> VPCLink
+    end
+
+    subgraph Microservices["Kubernetes / EKS Microservice Layer"]
+        IngestionSvc["Telemetry Ingestion Service (cmd/ingestion)\n- go-chi/v5 Router\n- 50-Goroutine Worker Pool\n- Backpressure Channel Buffer"]
+        SaaSDiscSvc["SaaS Discovery Service (cmd/saasdisc)\n- MS Entra ID Client Credentials\n- Graph API + HTTP 429 Jitter Backoff"]
+        CloudDiscSvc["Cloud Discovery Service (cmd/clouddisc)\n- AWS STS AssumeRole (ExternalId)\n- EC2 & S3 Resource Scanners"]
+    end
+
+    subgraph ExternalServices["External Cloud Integrations"]
+        MSGraph["Microsoft Graph API / Entra ID"]
+        AWSSTS["AWS Target Accounts (STS / EC2 / S3)"]
+        AWSKMS["AWS KMS (Envelope Encryption)"]
+    end
+
+    subgraph Persistence["Persistence & Security Layer"]
+        PostgreSQL[("PostgreSQL Database (v16)\n- Tenant Row-Level Security (RLS)\n- JSONB GIN Hardware Indexing\n- Devices / SaaS / Cloud Schemas")]
+    end
+
+    %% Flow Connections
+    AgentDaemon -- "mTLS POST Payload" --> APIGateway
+    VPCLink --> IngestionSvc
+    IngestionSvc -- "SET LOCAL app.current_tenant_id\nRLS Transaction" --> PostgreSQL
+    
+    SaaSDiscSvc <--> MSGraph
+    SaaSDiscSvc -- "Store SaaS Inventory" --> PostgreSQL
+
+    CloudDiscSvc <--> AWSSTS
+    CloudDiscSvc -- "Store Cloud Inventory" --> PostgreSQL
+
+    PostgreSQL <--> AWSKMS
 ```
 
 ### Core Design Principles
